@@ -273,6 +273,34 @@ systemctl start docker
 #查看docker的状态
 systemctl status docker
 
+#修改国内的镜像源
+vi /etc/docker/daemon.json
+#修改成以下地址
+{
+    "registry-mirrors": [
+        "加速地址"
+    ],
+    "insecure-registries": []
+}
+#国内加速地址
+#Docker中国区官方镜像(http://www.docker-cn.com/registry-mirror) 
+https://registry.docker-cn.com
+#网易 
+http://hub-mirror.c.163.com
+#ustc 
+https://docker.mirrors.ustc.edu.cn
+#阿里（使用正常）
+https://kfwkfulq.mirror.aliyuncs.com
+#最后设置完一定要重启一下docker 
+service docker restart
+
+
+
+
+
+
+
+
 #查看已经下载的docker镜像:镜像只是一个只读的模板，像是一个系统光盘镜像
 docker images
 #测试docker是否安装成功
@@ -341,8 +369,17 @@ docker run
 docker run java /bin/echo 'Hello World'
 #运行nginx
 docker run -d -p 91:80 nginx
+#以上命令运行Nginx会运行成功后Nginx容器会停止，以下命令不会停止
+docker run -p 80:80 -d nginx
 #访问http://Docker宿主机IP:91/
 #需要注意的是，使用docker run命令创建容器时，会先检查本地是否存在指定镜像。如果本地不存在该名称的镜像，Docker就会自动从Docker Hub下载镜像并启动一个Docker容器
+
+#通过主机目录映射到容器
+docker  run  -p  80:80  -d  -v  $PWD/html:usr/share/nginx/html  docker.io/nginx
+#-v  $PWD/html:usr/share/nginx/html   表示把当前路径下html目录映射为usr/share/nginx/html
+#也就是说主机下的html就是容器下的usr/share/nginx/html
+#html内的文件修改和添加就等同于容器usr/share/nginx/html文件操作
+#外网访问就可以访问得到，就不用再登录容器操作文件了
 
 #查看运行中的容器
 docker ps
@@ -387,7 +424,8 @@ docker start 784fd3b294d7
 docker restart 784fd3b294d7
 
 
-#进入已经运行的容器；第一种方式
+#进入已经运行的容器
+#第一种方式(测试显示进nginx容器内部容器就会停止)
 docker attach 784fd3b294d7
 #很多场景下，使用docker attach 命令并不方便。当多个窗口同时attach到同一个容器时，所有窗口都会同步显示。同理，如果某个窗口发生阻塞，其他窗口也无法执行操作。
 
@@ -436,7 +474,10 @@ Name,   shorthand	     Default	       Description
 #例
 docker import nginx2.tar nginx
 
-
+#进入容器
+docker exec -it 容器id /bin/bash
+#例
+docker exec -it 容器ID /bin/bash
 
 ```
 
