@@ -479,5 +479,134 @@ docker exec -it 容器id /bin/bash
 #例
 docker exec -it 容器ID /bin/bash
 
+
+
+
+#数据卷之间可以共享数据
+
+
 ```
+
+## DockerFile学习
+
+```shell
+#简单的DockerFile学习,VOLUME处于可移植性考虑，只能设置容器内的目录
+
+#第一步编写可执行脚本
+From centos
+VOLUME ["/home/dataVolumeContainer1","/home/dataVolumeContainer2"]
+CMD echo "docker build success…… finished!"
+CMD /bin/bash
+
+#生成新的镜像,不要忘记最后那一个点，脚本名称如果是Dockerfile可以不用加-f
+docker build -f /可执行脚本路径 -t 镜像名称:版本号 .
+#执行构建命令
+chmod u+x Dockerfile
+docker build -f /home/docker/Dockerfile -t zouyaowen .
+
+#Dockerfile基础知识
+
+#每个保留字指令必须大写，而且指令后面必须加一个参数
+#指令从上到下顺序执行
+#井号表示注释
+#每条指令都会创建一个新的镜像层，并对镜像进行提交
+
+#DocekrFile主要命令
+#FROM、MAINTAINER、RUN、EXPOSE、WORKDIR、ENV、ADD、COPY、VOLUME、CMD、ENTRYPOINT、ONBUILD
+
+#FROM：基础镜像，当前镜像基于哪一个镜像
+#MAINTAINER：镜像维护者的姓名和邮箱zyw<1227701903@qq.com>
+#RUN:容器构建时需要运行的命令
+#EXPOSE：对外暴露的端口
+#WORKDIR：指定创建容器后，终端默认登录进来的工作目录
+#ENV：定义环境变量，在其它指令中可以使用
+#例
+ENV INIT_PATH /usr/local
+WORKDIR $INIT_PATH
+#ADD:复制加解压缩
+#COPY：单纯的复制，两种写法：COPY src dst/COPY ["src","dst"]
+#VOLUME:数据卷["/home/dataVolumeContainer1","/home/dataVolumeContainer2"]
+#CMD:最后一行命令起作用
+#ENTRYPOINT：不会被替换，命令会追加
+#ONBUILD：被继承是触发
+
+
+
+#构建Dockerfile案例
+FROM centos
+
+ENV INIT_PATH /usr/local
+WORKDIR $INIT_PATH
+
+RUN yum -y install vim
+RUN yum -y install net-tools
+RUN yum -y install wget curl
+
+EXPOSE 80
+EXPOSE 8080
+EXPOSE 8679
+EXPOSE 3366
+EXPOSE 5672
+EXPOSE 15672
+
+CMD echo "build-----------------secussful"
+CMD /bin/bash
+
+#文件夹名称为Dockerfile2，构建命令
+docker build -f /home/docker/Dockerfile2 -t zCentOS:1.0 .
+#以上镜像名称不能有大写字母
+docker build -f /home/docker/Dockerfile2 -t zcentos:1.0 .
+#运行镜像需要加版本号
+docker run -it zcentos:1.0 /bin/bash
+
+```
+
+
+
+## 自定义Tomcat镜像
+
+```shell
+FROM centos
+MAINTAINER zyw<1227701903@qq.com>
+#将宿主机当前上下文文件c.txt复制进/usr/local文件夹下并重命名
+COPY c.txt /usr/local/container.txt
+#将Java与Tomcat添加进容器内
+ADD jdk-8u201-linux-x64.tar.gz /usr/local
+ADD apache-tomcat-8.5.41.tar.gz /usr/local
+#安装vim编辑器
+yum -y install vim
+#设置终端访问默认路径
+ENV INIT_PATH /usr/local
+WORKDIR $INIT_PATH
+#配置Java与Tomcat环境变量
+ENV JAVA_HOME /usr/local/jdk-8u201-linux-x64
+ENV CLASSPATH $JAVA_HOME/lib/dt.jar:$JAVA_HOME/lib/tools.jar
+ENV CATALINA_HOME /usr/local/apache-tomcat-8.5.41
+ENV CATALINA_BASE /usr/local/apache-tomcat-8.5.41
+ENV PATH $PATH:$JAVA_HOME/bin:$CATALINA_HOME/lib:$CATALINA_HOME/bin
+#容器运行时监听的端口
+EXPOSE 8080
+#启动tomcat
+#ENTRYPOINT ["/usr/local/apache-tomcat-8.5.41/bin/start.sh"]
+#CMD ["/usr/local/apache-tomcat-8.5.41/bin/catalina.sh","run"]
+CMD /usr/local/apache-tomcat-8.5.41/bin/start.sh && tail -F /usr/local/apache-tomcat-8.5.41/logs/catalina.out
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
