@@ -594,6 +594,15 @@ CMD /usr/local/apache-tomcat-8.5.41/bin/start.sh && tail -F /usr/local/apache-to
 
 ```
 
+## Linux命令
+
+```shell
+#查看命令对应的安装包
+yum whatprovides *lsof
+#删除某个端口进程
+kill -9 $(lsof -i:88|awk '{print $2}'|tail -n 2)
+```
+
 
 
 
