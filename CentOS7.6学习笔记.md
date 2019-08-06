@@ -601,6 +601,8 @@ CMD /usr/local/apache-tomcat-8.5.41/bin/start.sh && tail -F /usr/local/apache-to
 yum whatprovides *lsof
 #删除某个端口进程
 kill -9 $(lsof -i:88|awk '{print $2}'|tail -n 2)
+
+ps -ef |grep $z2 |grep -v grep |awk '{print $2}'
 ```
 
 
