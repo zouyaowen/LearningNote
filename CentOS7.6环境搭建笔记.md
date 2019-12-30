@@ -233,6 +233,9 @@ chown -R mysql:mysql ./mysql/
 cd /usr/local/mysql
 #执行命令
 bin/mysqld --initialize --user=mysql --basedir=/usr/local/mysql --datadir=/usr/local/mysql/data
+#此处可能报错：bin/mysqld: error while loading shared libraries: libaio.so.1: cannot open shared object file: No such file or directory
+#解决方案
+yum install -y libaio-devel.x86_64
 #命令执行结果最后一行有一个临时密码要记住
 bin/mysql_ssl_rsa_setup  --datadir=/usr/local/mysql/data
 #修改data中的SSL文件的所属用户及用户组
@@ -265,6 +268,7 @@ default-storage-engine=INNODB
 lower_case_table_names=1
 #限制server接受的数据包大小
 max_allowed_packet=16M
+sql_mode='STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION'
 # 计划事件开启:
 event_scheduler = on
 
@@ -302,11 +306,14 @@ export PATH=$PATH:$JAVA_HOME/bin:/usr/local/mysql/bin:/usr/local/mysql/lib
 #重新加载环境变量
 source /etc/profile
 
+#启动MySQL
+systemctl start mysql
+
 #进入MySQL，使用临时密码
 mysql  -uroot -p
 Enter password: 
 #系统提示必须先修改密码，现场开通密码不能设置的过于简单,root的密码设置为123456
-mysql>set password=password(`123456`);
+mysql>set password=password('123456');
 mysql>GRANT ALL PRIVILEGES ON *.* TO 'zouyaowen'@'%' IDENTIFIED BY '123456' WITH GRANT OPTION;
 #刷新设置
 mysql>flush privileges;
@@ -330,6 +337,12 @@ firewall-cmd --zone=public --add-port=3366/tcp --permanent
 firewall-cmd --reload
 #查看端口是否开启成功，显示3366/tcp表示成功
 firewall-cmd --list-ports
+
+#select @@sql_mode
+ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION
+
+#解决方案、
+set sql_mode ='STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION';
 ```
 
 ### MYSQL8.0.13
