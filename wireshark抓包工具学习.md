@@ -47,3 +47,14 @@
 可能的值：`not`, `and`, `or` 
 
 <http://www.imooc.com/article/74915?block_id=tuijian_wz> 
+
+
+
+## TCPDUMP
+
+```shell
+# 命令学习
+tcpdump -s0 -vv -i any -w ./111.pcap
+# 命令解析: -s0 不限制包数据大小 -vv 详细的显示信息 -w 保存文件 -i 指定网络端口 any标识所有网络端口
+```
+
