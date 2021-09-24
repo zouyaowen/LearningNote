@@ -73,3 +73,83 @@ vue-ui项目、
 cnpm i axios -S
 ```
 
+## VUE3学习笔记
+
+```shell
+#安装node
+#确认node版本
+node -v 
+v14.16.1
+#与node一起安装的包管理工具
+npm -v
+#安装nrm可以使用国内的镜像源
+npm install nrm -g
+#查看镜像源
+nrm ls
+* npm -------- https://registry.npmjs.org/
+  yarn ------- https://registry.yarnpkg.com/
+  cnpm ------- http://r.cnpmjs.org/
+  taobao ----- https://registry.npm.taobao.org/
+  nj --------- https://registry.nodejitsu.com/
+  npmMirror -- https://skimdb.npmjs.com/registry/
+  edunpm ----- http://registry.enpmjs.org/ 
+#使用淘宝镜像源
+nrm use taobao
+#再次查看镜像源
+nrm ls
+  npm -------- https://registry.npmjs.org/
+  yarn ------- https://registry.yarnpkg.com/
+  cnpm ------- http://r.cnpmjs.org/
+* taobao ----- https://registry.npm.taobao.org/
+  nj --------- https://registry.nodejitsu.com/
+  npmMirror -- https://skimdb.npmjs.com/registry/
+  edunpm ----- http://registry.enpmjs.org/
+  
+#删除旧的脚手架版本
+npm uninstall vue-cli -g
+# 或者如果使用yarn 则 yarn global remove vue-cli
+
+
+#安装vue脚手架
+npm install -g @vue/cli
+#安装结果——————@vue/cli@4.5.12
+#安装指定版本号脚手架
+#npm install -g @vue/cli@4.5.12
+#创建项目
+vue create mark
+#进入并运行项目
+cd mark
+npm run serve
+
+  App running at:
+  - Local:   http://localhost:8080/
+  - Network: http://192.168.124.15:8080/
+
+  Note that the development build is not optimized.
+  To create a production build, run npm run build.
+  
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
