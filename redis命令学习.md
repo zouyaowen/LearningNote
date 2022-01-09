@@ -52,3 +52,17 @@ set key value
 EXPIRE key seconds
 ```
 
+## zset命令学习
+
+```shell
+# 添加元素
+ZADD rank_data 10 helloworld10
+ZADD rank_data 11 helloworld11
+ZADD rank_data 12 helloworld12 13 helloworld13
+ZADD rank_data 14 helloworld14 15 helloworld15
+
+
+```
+
+
+
