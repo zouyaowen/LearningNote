@@ -55,11 +55,45 @@ EXPIRE key seconds
 ## zset命令学习
 
 ```shell
-# 添加元素
+# 添加元素------> 添加已经存在的元素，无论score是否改变，返回值为0，不存在的元素返回值为1
 ZADD rank_data 10 helloworld10
 ZADD rank_data 11 helloworld11
+# 添加多个元素
 ZADD rank_data 12 helloworld12 13 helloworld13
 ZADD rank_data 14 helloworld14 15 helloworld15
+
+# 查询所有的元素和分数-----------------获取所有数据（排行榜功能）
+ZRANGE rank_data 0 -1 WITHSCORES
+# 查询所有的元素
+ZRANGE rank_data 0 -1
+
+# 返回有序集合的个数,key不存在返回0
+ZCARD rank_data
+
+# 获取score值在某个范围（闭区间）的数据
+ZCOUNT key min max
+zcount rank_data 10 12   ----->3
+
+# 对元素的分值进行增加或减少（负值）------------>
+# 当 key 不存在，或 member 不是 key 的成员时， ZINCRBY key increment member 等同于 ZADD key increment member 
+ZINCRBY key increment member
+ZINCRBY rank_data 1 helloworld15
+
+# ZRANGEBYSCORE key min max [WITHSCORES] [LIMIT offset count]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 ```
