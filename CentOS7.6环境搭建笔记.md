@@ -1,6 +1,6 @@
-## CentOS7.6环境搭建学习笔记
+# CentOS7.6环境搭建学习笔记
 
-### IP配置
+# IP配置
 
 ```shell
 #以下为CentOS7.6虚拟机配置，桥接模式
@@ -33,7 +33,7 @@ DNS1=114.114.114.114
 DNS2=8.8.8.8
 ```
 
-### 服务器配置
+# 服务器配置
 
 ```shell
 #关闭Selinux
@@ -50,7 +50,7 @@ curl -o /etc/yum.repos.d/CentOS-Base.repo http://mirrors.aliyun.com/repo/Centos-
 
 
 
-### 上传安装文件
+# 上传安装文件
 
 ```shell
 [root@localhost software]# ls
@@ -58,7 +58,7 @@ jdk-8u212-linux-x64.tar.gz  mysql-5.7.24-linux-glibc2.12-x86_64.tar.gz  zookeepe
 kafka_2.12-2.1.1.tgz        mysql-8.0.15-linux-glibc2.12-x86_64.tar.xz  redis-5.0.2.tar.gz
 ```
 
-### JDK1.8离线安装
+# JDK1.8离线安装
 
 ```shell
 #解压安装包
@@ -74,7 +74,7 @@ export CLASSPATH=.:$JAVA_HOME/lib/dt.jar:$JAVA_HOME/lib/tools.jar
 source /etc/profile
 ```
 
-### 在线安装Nginx
+# 在线安装Nginx
 
 ```shell
 vi /etc/yum.repos.d/nginx.repo
@@ -176,19 +176,208 @@ firewall-cmd --reload
 firewall-cmd --list-ports
 ```
 
-### 离线安装Nginx
+# 离线安装Nginx
+
+```shell
+# 安装编译软件
+yum install -y gcc-c++
+yum install -y pcre pcre-devel
+yum install -y openssl openssl-devel
+yum install -y zlib zlib-devel
+
+# 下载nginx软件
+wget https://nginx.org/download/nginx-1.22.0.tar.gz
+
+# 解压软件
+tar -zxf nginx-1.22.0.tar.gz
+cd nginx-1.22.0
+# 编译软件
+#./configure --prefix=/usr/local/nginx/
+./configure --prefix=/usr/local/nginx --with-http_stub_status_module --with-http_ssl_module
+# 安装软件   增加模块重新编译后make后替换编译产物nginx即可，make install 会重装
+make && make install
+
+# 配置环境变量
+export PATH=/usr/local/nginx/sbin:$PATH
+# 重新加载环境变量
+source /etc/profile
+
+# 查看Nginx配置是否正确
+nginx -t
+
+# 启动Nginx
+nginx
+
+
+```
+
+## Nginx配置文件参考
+
+```shell
+
+#user  nobody;
+worker_processes  1;
+
+#error_log  logs/error.log;
+#error_log  logs/error.log  notice;
+#error_log  logs/error.log  info;
+
+#pid        logs/nginx.pid;
+
+
+events {
+    worker_connections  1024;
+}
+
+
+http {
+    include       mime.types;
+    default_type  application/octet-stream;
+
+    #log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+    #                  '$status $body_bytes_sent "$http_referer" '
+    #                  '"$http_user_agent" "$http_x_forwarded_for"';
+
+    #access_log  logs/access.log  main;
+    
+    # 隐藏版本号
+    server_tokens off;
+
+    sendfile        on;
+    #tcp_nopush     on;
+
+    #keepalive_timeout  0;
+    keepalive_timeout  65;
+
+    gzip  on;
+
+    server {
+        listen       80;
+        server_name  suiyueran.top;
+
+        #charset koi8-r;
+
+        #access_log  logs/host.access.log  main;
+
+        location / {
+            root   html;
+            index  index.html index.htm;
+        }
+
+        # 将请求转成https
+        rewrite ^(.*)$ https://$host$1 permanent;
+
+
+        #error_page  404              /404.html;
+
+        # redirect server error pages to the static page /50x.html
+        #
+        #  error_page   500 502 503 504  /50x.html;
+        #  location = /50x.html {
+        #      root   html;
+        #  }
+
+        # proxy the PHP scripts to Apache listening on 127.0.0.1:80
+        #
+        #location ~ \.php$ {
+        #    proxy_pass   http://127.0.0.1;
+        #}
+
+        # pass the PHP scripts to FastCGI server listening on 127.0.0.1:9000
+        #
+        #location ~ \.php$ {
+        #    root           html;
+        #    fastcgi_pass   127.0.0.1:9000;
+        #    fastcgi_index  index.php;
+        #    fastcgi_param  SCRIPT_FILENAME  /scripts$fastcgi_script_name;
+        #    include        fastcgi_params;
+        #}
+
+        # deny access to .htaccess files, if Apache's document root
+        # concurs with nginx's one
+        #
+        #location ~ /\.ht {
+        #    deny  all;
+        #}
+    }
+
+
+    # another virtual host using mix of IP-, name-, and port-based configuration
+    #
+    #server {
+    #    listen       8000;
+    #    listen       somename:8080;
+    #    server_name  somename  alias  another.alias;
+
+    #    location / {
+    #        root   html;
+    #        index  index.html index.htm;
+    #    }
+    #}
+
+
+    # HTTPS server
+    
+    server {
+        listen       443 ssl;
+        server_name  suiyueran.top;
+        ssl_certificate      /usr/local/nginx/conf/suiyueran.top.pem;
+        ssl_certificate_key  /usr/local/nginx/conf/suiyueran.top.key;
+        ssl_session_cache    shared:SSL:1m;
+        ssl_session_timeout  5m;
+        ssl_ciphers  HIGH:!aNULL:!MD5;
+        ssl_prefer_server_ciphers  on;
+        location / {
+            root   html;
+            index  index.html index.htm;
+        }
+        error_page   500 502 503 504  /50x.html;
+        location = /50x.html {
+            root   html;
+        }
+    }
+}
+
+
+```
+
+## Nginx路由转发配置参考
+
+```shell
+    location /api/v2 {
+        proxy_set_header Host 192.168.0.100;
+        #proxy_pass以斜杠结尾匹配的的URL会整体替换，后面的拼接，不包含location
+        proxy_pass http://192.168.0.100:81/new/;
+    }
+    
+    location /api/v1 {
+        proxy_set_header Host 192.168.0.100;
+        #proxy_pass不以斜杠结尾（且最后为端口）会由proxy_pass拼接匹配到的URL之后的路径，包含location
+        proxy_pass http://192.168.0.100:81;
+        #proxy_pass不以斜杠结尾（最后不为端口）proxy_pass拼接匹配到的URL之后的路径，不包含location
+        #proxy_pass http://192.168.0.100:81/new;
+        #以上事例不拼接匹配到的URL
+    }
+```
+
+## Nginx部署前端项目
+
+```shell
+
+
+
+
+```
+
+
+
+# 在线安装MySQL
 
 ```shell
 
 ```
 
-### 在线安装MySQL
-
-```shell
-
-```
-
-### 离线安装MySQL5.7.24
+# 离线安装MySQL5.7.24
 
 ```shell
 #卸载系统自带的Mariadb
@@ -345,7 +534,7 @@ ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DI
 set sql_mode ='STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION';
 ```
 
-### MYSQL8.0.13
+# MYSQL8.0.13
 
 ```shell
 #mysql-8.0.15-linux-glibc2.12-x86_64.tar.xz安装包安装
@@ -511,13 +700,9 @@ firewall-cmd --list-ports
 
 
 
-### Redis在线安装
 
-```shell
 
-```
-
-### Redis5.0.5离线安装
+# Redis5.0.5安装
 
 ```shell
 cd /home/software
@@ -594,7 +779,7 @@ firewall-cmd --reload
 firewall-cmd --list-ports
 ```
 
-### RabbitMQ在线安装
+# RabbitMQ在线安装
 
 ```shell
 
@@ -671,9 +856,9 @@ firewall-cmd --list-ports
 vim /usr/lib/rabbitmq/bin/rabbitmq-env
 ```
 
-### Kafka离线安装
+# Kafka离线安装
 
-### Zookeeper离线安装
+# Zookeeper离线安装
 
 ```shell
 #zookeeper软件安装版本3.4.14
@@ -817,7 +1002,7 @@ delete /zou/seq0000000002 1
 
 
 
-### RocketMQ离线安装
+# RocketMQ离线安装
 
 ```shell
 yum -y install wget
