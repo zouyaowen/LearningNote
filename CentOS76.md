@@ -364,7 +364,31 @@ http {
 
 ```shell
 
+# nignx页面域名直接访问
+location / {
+		root /usr/share/nginx/html
+		index index.htm index.html
+}
 
+# 多个前端系统部署同一个Nginx配置方案,域名添加路径转发
+# 页面域名后加路径转发配置方案一
+location /1234 {
+		alias /work/front-end/1234
+		index index.htm index.html
+}
+
+# 页面域名后加路径转发配置方案二
+location /1235 {
+		root /work/front-end/
+		try_files $uri /1235/index.html
+}
+
+# 服务器端接口请求转发配置方案一
+location /api {
+		proxy_pass http:127.0.0.1:8080/mark/
+}
+
+# 服务器端接口请求转发配置方案二
 
 
 ```
