@@ -383,14 +383,76 @@ location /1235 {
 		try_files $uri /1235/index.html
 }
 
-# 服务器端接口请求转发配置方案一
-location /api {
-		proxy_pass http:127.0.0.1:8080/mark/
+# 本地端口转发到另一个端口 在配置proxy_pass代理转发时，如果后面的url加/，表示绝对根路径；如果没有/，表示相对路径
+location /api/ {
+    # proxy_pass http:127.0.0.1:8081 实际映射关系是      域名/api/URI---->   域名:端口/api/URI
+    # proxy_pass http:127.0.0.1:8081/ 实际映射关系是     域名/api/URI---->   域名:端口/URI
+		proxy_pass http:127.0.0.1:8081/
+		# 总结：后端接口转发location 映射前后都需要有/    proxy_pass最后没有/拼接location，有则不拼接
 }
 
-# 服务器端接口请求转发配置方案二
+# 将域名转发到本地端口
+location / {
+		proxy_pass http:127.0.0.1:8081;
+		# 修改转发请求头，让8080端口的应用可以受到真实的请求
+		proxy_set_header Host $proxy_host; 
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+}
+
+# 域名转发到另外一个域名
+server{
+  listen 80;
+  server_name  www.qq.com;
+  index  index.php index.html index.htm;
+
+  location / {
+    proxy_pass  http://www.baidu.com;
+    proxy_set_header Host $proxy_host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+  }
+}
 
 
+```
+
+## Nginx防止爬虫压测
+
+```shell
+# 配置目录conf下面   agent_deny.conf
+
+# 禁止Scrapy等工具的抓取
+if ($http_user_agent ~* (Scrapy|Curl|HttpClient)) {
+  return 403;
+}
+# 禁止指定UA及UA为空的访问
+if ($http_user_agent ~ "FeedDemon|JikeSpider|Indy Library|Alexa Toolbar|AskTbFXTV|AhrefsBot|CrawlDaddy|CoolpadWebkit|Java|Feedly|UniversalFeedParser|ApacheBench|Microsoft URL Control|Swiftbot|ZmEu|oBot|jaunty|Python-urllib|lightDeckReports Bot|YYSpider|DigExt|YisouSpider|HttpClient|MJ12bot|heritrix|EasouSpider|LinkpadBot|Ezooms|^$" )
+{
+  return 403;
+}
+# 禁止非GET|HEAD|POST|PUT|DELETE 方式的抓取
+if ($request_method !~ ^(GET|HEAD|POST|PUT|DELETE)$) {
+  return 403;
+}
+ 
+# 禁止使用代理ip来访问，或禁止使用压力测试软件进行dos攻击
+  
+if ($http_user_agent ~* ApacheBench|WebBench|java/){
+                return 403;
+        }
+if ($http_user_agent ~* (Wget|ab) ) {
+   return 403;
+}
+ 
+if ($http_user_agent ~* LWP::Simple|BBBike|wget) {
+            return 403;
+}
+
+
+
+# 在配置文件server中  插入如下代码   插入到server还是location中需要验证
+include agent_deny.conf;
 ```
 
 
