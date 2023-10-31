@@ -1,4 +1,4 @@
-# CentOS7.6环境搭建学习笔记
+# CentOS7.6环境搭建 笔记
 
 # IP配置
 
@@ -46,6 +46,10 @@ mv /etc/yum.repos.d/CentOS-Base.repo /etc/yum.repos.d/CentOS-Base.repo.backup
 #wget -O /etc/yum.repos.d/CentOS-Base.repo http://mirrors.aliyun.com/repo/Centos-7.repo
 #或者
 curl -o /etc/yum.repos.d/CentOS-Base.repo http://mirrors.aliyun.com/repo/Centos-7.repo
+
+
+# 腾讯云服务器更换服务器名称
+#  vi /etc/hostname  修改后重启即可
 ```
 
 
@@ -191,7 +195,7 @@ wget https://nginx.org/download/nginx-1.22.0.tar.gz
 # 解压软件
 tar -zxf nginx-1.22.0.tar.gz
 cd nginx-1.22.0
-# 编译软件
+# 配置软件
 #./configure --prefix=/usr/local/nginx/
 ./configure --prefix=/usr/local/nginx --with-http_stub_status_module --with-http_ssl_module
 # 安装软件   增加模块重新编译后make后替换编译产物nginx即可，make install 会重装
@@ -217,6 +221,412 @@ nginx
 
 #user  nobody;
 worker_processes  1;
+
+#error_log  logs/error.log;
+#error_log  logs/error.log  notice;
+#error_log  logs/error.log  info;
+
+#pid        logs/nginx.pid;
+
+
+events {
+    worker_connections  1024;
+}
+
+
+http {
+    include       mime.types;
+    default_type  application/octet-stream;
+
+    #log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+    #                  '$status $body_bytes_sent "$http_referer" '
+    #                  '"$http_user_agent" "$http_x_forwarded_for"';
+
+    #access_log  logs/access.log  main;
+    
+    # 隐藏版本号
+    server_tokens off;
+    
+    # header传递允许有带下划线字段
+    underscores_in_headers on;
+
+    sendfile        on;
+    #tcp_nopush     on;
+
+    #keepalive_timeout  0;
+    keepalive_timeout  65;
+
+    gzip  on;
+
+    server {
+        listen       80;
+        server_name  suiyueran.top;
+        charset utf-8;
+
+        #charset koi8-r;
+
+        #access_log  logs/host.access.log  main;
+
+        location / {
+            root   html;
+            index  index.html index.htm;
+        }
+
+        # 将请求转成https
+        rewrite ^(.*)$ https://$host$1 permanent;
+
+
+        #error_page  404              /404.html;
+
+        # redirect server error pages to the static page /50x.html
+        #
+        #  error_page   500 502 503 504  /50x.html;
+        #  location = /50x.html {
+        #      root   html;
+        #  }
+
+        # proxy the PHP scripts to Apache listening on 127.0.0.1:80
+        #
+        #location ~ \.php$ {
+        #    proxy_pass   http://127.0.0.1;
+        #}
+
+        # pass the PHP scripts to FastCGI server listening on 127.0.0.1:9000
+        #
+        #location ~ \.php$ {
+        #    root           html;
+        #    fastcgi_pass   127.0.0.1:9000;
+        #    fastcgi_index  index.php;
+        #    fastcgi_param  SCRIPT_FILENAME  /scripts$fastcgi_script_name;
+        #    include        fastcgi_params;
+        #}
+
+        # deny access to .htaccess files, if Apache's document root
+        # concurs with nginx's one
+        #
+        #location ~ /\.ht {
+        #    deny  all;
+        #}
+    }
+
+
+    # another virtual host using mix of IP-, name-, and port-based configuration
+    #
+    #server {
+    #    listen       8000;
+    #    listen       somename:8080;
+    #    server_name  somename  alias  another.alias;
+
+    #    location / {
+    #        root   html;
+    #        index  index.html index.htm;
+    #    }
+    #}
+
+
+    # HTTPS server
+    
+    server {
+        listen       443 ssl;
+        server_name  suiyueran.top;
+        ssl_certificate      /usr/local/nginx/conf/suiyueran.top.pem;
+        ssl_certificate_key  /usr/local/nginx/conf/suiyueran.top.key;
+        ssl_session_cache    shared:SSL:1m;
+        ssl_session_timeout  5m;
+        ssl_ciphers  HIGH:!aNULL:!MD5;
+        ssl_prefer_server_ciphers  on;
+        location / {
+            root   html;
+            index  index.html index.htm;
+        }
+        error_page   500 502 503 504  /50x.html;
+        location = /50x.html {
+            root   html;
+        }
+    }
+}
+
+
+```
+
+
+
+## Nginx前后端配置
+
+```nginx
+
+# nignx页面域名直接访问
+location / {
+		root /usr/share/nginx/html
+		index index.htm index.html
+}
+
+# 多个前端系统部署同一个Nginx配置方案,域名添加路径转发
+# 页面域名后加路径转发配置方案一
+location /1234 {
+		alias /work/front-end/1234;
+		index index.htm index.html;
+}
+
+# 页面域名后加路径转发配置方案二
+location /1235 {
+		root /work/front-end/;
+		try_files $uri /1235/index.html;
+}
+
+# 本地端口转发到另一个端口 在配置proxy_pass代理转发时，如果后面的url加/，表示绝对根路径；如果没有/，表示相对路径
+location /api/ {
+    # proxy_pass http:127.0.0.1:8081      实际映射关系     域名/api/URI---->   域名:端口/api/URI
+    # proxy_pass http:127.0.0.1:8081/     实际映射关系     域名/api/URI---->   域名:端口/URI
+		proxy_pass http:127.0.0.1:8081/
+		# 总结：后端接口转发location 映射前后都需要有/    proxy_pass最后没有/拼接location，有则不拼接
+}
+
+# 将域名转发到本地端口
+location / {
+		proxy_pass http:127.0.0.1:8081;
+		# 修改转发请求头，让8080端口的应用可以受到真实的请求
+		proxy_set_header Host $proxy_host; 
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+}
+
+# 域名转发到另外一个域名
+server{
+  listen 80;
+  server_name  www.qq.com;
+  index  index.php index.html index.htm;
+
+  location / {
+    proxy_pass  http://www.baidu.com;
+    proxy_set_header Host $proxy_host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+  }
+}
+
+
+```
+
+## Nginx高级配置
+
+```shell
+# 根据header参数转发不同的服务   header头中env=env_8081   获取key对应的值  $http_env  
+location ~/front/(.*) {
+    proxy_set_header Host $proxy_host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    if ($http_env = "env_8081"){
+        proxy_pass http://node_v1/$1;
+        break;
+    }
+    if ($http_env = "env_8082"){
+        proxy_pass http://node_v2/$1;
+        break;
+    }
+}
+
+
+# cation匹配命令
+
+~      #波浪线表示执行一个正则匹配，区分大小写
+~*     #表示执行一个正则匹配，不区分大小写
+^~     #^~表示普通字符匹配，不是正则匹配。如果该选项匹配，只匹配该选项，不匹配别的选项，一般用来匹配目录
+=      #进行普通字符精确匹配
+@      #"@" 定义一个命名的 location，使用在内部定向时，例如 error_page, try_files
+
+
+
+# 参考
+https://blog.51cto.com/u_15127532/3942184
+https://segmentfault.com/a/1190000002797606?spm=a2c6h.12873639.article-detail.6.489465b0r2BYIq
+
+```
+
+
+
+
+
+## Nginx配置理解
+
+```nginx
+
+location ~/abc/(.*)/(.*) {
+    set $param1 $1
+    set $param2 $2
+    content_by_lua_block {
+        ngx.say(ngx.var.param1)
+        ngx.say(ngx.var.param2)
+    }
+}
+# 路径为  domain/abc/aaa/bbb
+# 输出为： 
+aaa
+bbb
+```
+
+
+
+## Nginx防止爬虫压测
+
+```shell
+# 配置目录conf下面   agent_deny.conf
+
+# 禁止Scrapy等工具的抓取
+if ($http_user_agent ~* (Scrapy|Curl|HttpClient)) {
+  return 403;
+}
+# 禁止指定UA及UA为空的访问
+if ($http_user_agent ~ "FeedDemon|JikeSpider|Indy Library|Alexa Toolbar|AskTbFXTV|AhrefsBot|CrawlDaddy|CoolpadWebkit|Java|Feedly|UniversalFeedParser|ApacheBench|Microsoft URL Control|Swiftbot|ZmEu|oBot|jaunty|Python-urllib|lightDeckReports Bot|YYSpider|DigExt|YisouSpider|HttpClient|MJ12bot|heritrix|EasouSpider|LinkpadBot|Ezooms|^$" )
+{
+  return 403;
+}
+# 禁止非GET|HEAD|POST|PUT|DELETE 方式的抓取
+if ($request_method !~ ^(GET|HEAD|POST|PUT|DELETE)$) {
+  return 403;
+}
+ 
+# 禁止使用代理ip来访问，或禁止使用压力测试软件进行dos攻击
+  
+if ($http_user_agent ~* ApacheBench|WebBench|java/){
+                return 403;
+        }
+if ($http_user_agent ~* (Wget|ab) ) {
+   return 403;
+}
+ 
+if ($http_user_agent ~* LWP::Simple|BBBike|wget) {
+            return 403;
+}
+
+
+
+# 在配置文件server中  插入如下代码   插入到server还是location中需要验证
+include agent_deny.conf;
+```
+
+## Nginx参考资料
+
+```shell
+https://zhuanlan.zhihu.com/p/384752564
+# 前端灰度方案
+https://juejin.cn/post/6960932304432660511
+# lua发动http请求
+https://blog.csdn.net/zhangxiao93/article/details/69220644
+https://cloud.tencent.com/developer/article/1043931
+https://blog.csdn.net/yulaoer53/article/details/116534813
+
+https://juejin.cn/post/7118945309425664008
+
+# 多域名配置
+https://cloud.tencent.com/developer/article/2144511
+```
+
+## Nginx配置LUA
+
+```shell
+# 安装编译软件
+yum install -y gcc-c++
+yum install -y pcre pcre-devel
+yum install -y openssl openssl-devel
+yum install -y zlib zlib-devel
+
+# 下载nginx软件
+wget https://nginx.org/download/nginx-1.22.0.tar.gz
+
+
+# LuaJIT-2.0.5.tar.gz方案废弃的替换解决方案
+yum install -y git
+git clone https://github.com/openresty/luajit2
+cd luajit2
+make && make install PREFIX=/usr/local/LuaJIT
+
+# 以下为废弃方案
+# wget http://luajit.org/download/LuaJIT-2.0.5.tar.gz
+# LuaJIT-2.0.5.tar.gz不建议使用，会报错nginx: [alert] detected a LuaJIT version which is not OpenResty’s; many optimizations will be disabled and performance will be compromised
+# 解压软件
+# tar -zxf LuaJIT-2.0.5.tar.gz
+# cd LuaJIT-2.0.5
+# make && make install PREFIX=/usr/local/LuaJIT
+# 卸载原有的安装  make uninstall
+
+
+
+# 规避错误/usr/local/nginx/sbin/nginx: error while loading shared libraries: libluajit-5.1.so.2: cannot open shared object file: No such file or directory
+
+# 方案一
+ln -s /usr/local/LuaJIT/lib/libluajit-5.1.so.2 /lib64/libluajit-5.1.so.2
+# 方案二
+echo "/usr/local/LuaJIT/lib" > /etc/ld.so.conf.d/usr_local_lib.conf
+# 方案三
+cp /usr/local/LuaJIT/lib/libluajit-5.1.so.2 /usr/local/lib/
+echo "/usr/local/lib"  >>/etc/ld.so.conf
+# 刷新配置
+ldconfig
+
+vim /etc/profile
+# 最后添加两行配置
+export LUAJIT_LIB=/usr/local/LuaJIT/lib
+export LUAJIT_INC=/usr/local/LuaJIT/include/luajit-2.0
+# 重新加载配置文件
+source /etc/profile
+# 验证配置
+lua -v
+
+# 添加编译模块
+cd /usr/local/
+wget https://github.com/simpl/ngx_devel_kit/archive/v0.3.0.tar.gz
+# 使用此版本 lua-nginx-module-0.10.14,-------------0.10.22版本会有问题
+wget https://github.com/openresty/lua-nginx-module/archive/v0.10.14.tar.gz
+tar -zxf v0.3.0.tar.gz 
+tar -zxf v0.10.14.tar.gz
+
+
+cd /home/software
+tar -zxf nginx-1.22.0.tar.gz
+cd nginx-1.22.0
+# 编译软件    安装软件   增加模块重新编译后make后替换编译产物nginx即可，make install 会重装
+./configure --prefix=/usr/local/nginx --with-http_ssl_module --with-http_flv_module --with-http_stub_status_module --with-http_gzip_static_module --with-http_realip_module --with-pcre --add-module=/usr/local/lua-nginx-module-0.10.14 --add-module=/usr/local/ngx_devel_kit-0.3.0 --with-stream
+
+
+make && make install
+
+
+
+# 配置环境变量
+vim /etc/profile
+export PATH=/usr/local/nginx/sbin:$PATH
+# 重新加载环境变量
+source /etc/profile
+
+# 查看Nginx配置是否正确
+nginx -t
+
+nginx -t
+# 错误参考以上解决方案
+# nginx: error while loading shared libraries: libluajit-5.1.so.2: cannot open shared object file: No such file or directory
+
+# 启动Nginx
+nginx
+
+# 验证LUA，nginx http server里添加配置
+location /hello_lua {
+    default_type 'text/html';
+    content_by_lua 'ngx.say("hello, lua!")';
+}
+
+
+
+```
+
+
+
+## Nginx配置实战
+
+```nginx
+
+#user  nobody;
+worker_processes  4;
 
 #error_log  logs/error.log;
 #error_log  logs/error.log  notice;
@@ -315,8 +725,150 @@ http {
     #    }
     #}
 
-
+    underscores_in_headers on;
     # HTTPS server
+    #
+    server {
+        listen       443 ssl;
+        server_name  suiyueran.top;
+        ssl_certificate      /usr/local/nginx/conf/suiyueran.top.pem;
+        ssl_certificate_key  /usr/local/nginx/conf/suiyueran.top.key;
+        ssl_session_cache    shared:SSL:1m;
+        ssl_session_timeout  5m;
+        ssl_ciphers  HIGH:!aNULL:!MD5;
+        ssl_prefer_server_ciphers  on;
+        location / {
+            root   html;
+            index  index.html index.htm;
+        }
+        error_page   500 502 503 504  /50x.html;
+        location = /50x.html {
+            root   html;
+        }
+	      location /api/ {
+            proxy_pass http://127.0.0.1:8081/;
+	        proxy_set_header Host $proxy_host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        }
+
+        
+        location /book/ {
+            proxy_set_header Host $proxy_host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+
+
+            add_header Access-Control-Allow-Origin *;
+            add_header Access-Control-Allow-Methods 'POST, GET, OPTIONS, PUT, DELETE,UPDATE';
+            add_header Access-Control-Allow-Headers 'DNT,X-Mx-ReqToken,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Authorization,jwt_token';
+            
+
+            if ($request_method = 'OPTIONS') {
+	 		          return 204;
+	 	        }
+
+            
+            proxy_pass http://127.0.0.1:8082/;
+        }
+
+
+
+
+        location /front/ {
+		    proxy_set_header Host $proxy_host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            if ($http_env = "env_8081"){
+                proxy_pass http://node_v1/$1/$2;
+				        break;
+            }
+            if ($http_env = "env_8082"){
+                proxy_pass http://node_v2;
+                break;
+            }
+        }
+
+
+        location ~/header/(.*) {
+            proxy_set_header Host $proxy_host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            if ($http_env = "env_8081"){
+                proxy_pass http://node_v1/$1;
+                break;
+            }
+            if ($http_env = "env_8082"){
+                proxy_pass http://node_v2/$1;
+                break;
+            }
+        } 
+     }
+
+	   upstream node_v1  {
+         server 127.0.0.1:8081;
+     }
+ 
+     upstream node_v2  {
+         server 127.0.0.1:8082;
+     }  
+}
+
+
+
+```
+
+## Nginx支持配置多域名
+
+> 两个域名的备案信息展示：
+
+```html
+<a href="https://beian.miit.gov.cn/" target="_blank">皖ICP备18026052号-1</a>
+<a href="https://beian.miit.gov.cn/" target="_blank">皖ICP备18026052号-2</a>
+```
+
+> 配置修改
+
+```nginx
+
+#user  nobody;
+worker_processes  4;
+
+events {
+    worker_connections  1024;
+}
+
+http {
+    include       mime.types;
+    default_type  application/octet-stream;
+
+    #access_log  logs/access.log  main;
+    
+    # 隐藏版本号
+    server_tokens off;
+
+    sendfile        on;
+    #tcp_nopush     on;
+
+    #keepalive_timeout  0;
+    keepalive_timeout  65;
+
+    gzip  on;
+
+    server {
+        listen       80;
+        server_name  suiyueran.top;
+
+        location / {
+            root   html;
+            index  index.html index.htm;
+        }
+
+        # 将请求转成https
+        rewrite ^(.*)$ https://$host$1 permanent;
+    }
+    # 支持有下划线的header参数
+    underscores_in_headers on;
     
     server {
         listen       443 ssl;
@@ -335,135 +887,126 @@ http {
         location = /50x.html {
             root   html;
         }
-    }
-}
-
-
-```
-
-## Nginx路由转发配置参考
-
-```shell
-    location /api/v2 {
-        proxy_set_header Host 192.168.0.100;
-        #proxy_pass以斜杠结尾匹配的的URL会整体替换，后面的拼接，不包含location
-        proxy_pass http://192.168.0.100:81/new/;
-    }
-    
-    location /api/v1 {
-        proxy_set_header Host 192.168.0.100;
-        #proxy_pass不以斜杠结尾（且最后为端口）会由proxy_pass拼接匹配到的URL之后的路径，包含location
-        proxy_pass http://192.168.0.100:81;
-        #proxy_pass不以斜杠结尾（最后不为端口）proxy_pass拼接匹配到的URL之后的路径，不包含location
-        #proxy_pass http://192.168.0.100:81/new;
-        #以上事例不拼接匹配到的URL
-    }
-```
-
-## Nginx部署前端项目
-
-```shell
-
-# nignx页面域名直接访问
-location / {
-		root /usr/share/nginx/html
-		index index.htm index.html
-}
-
-# 多个前端系统部署同一个Nginx配置方案,域名添加路径转发
-# 页面域名后加路径转发配置方案一
-location /1234 {
-		alias /work/front-end/1234
-		index index.htm index.html
-}
-
-# 页面域名后加路径转发配置方案二
-location /1235 {
-		root /work/front-end/
-		try_files $uri /1235/index.html
-}
-
-# 本地端口转发到另一个端口 在配置proxy_pass代理转发时，如果后面的url加/，表示绝对根路径；如果没有/，表示相对路径
-location /api/ {
-    # proxy_pass http:127.0.0.1:8081 实际映射关系是      域名/api/URI---->   域名:端口/api/URI
-    # proxy_pass http:127.0.0.1:8081/ 实际映射关系是     域名/api/URI---->   域名:端口/URI
-		proxy_pass http:127.0.0.1:8081/
-		# 总结：后端接口转发location 映射前后都需要有/    proxy_pass最后没有/拼接location，有则不拼接
-}
-
-# 将域名转发到本地端口
-location / {
-		proxy_pass http:127.0.0.1:8081;
-		# 修改转发请求头，让8080端口的应用可以受到真实的请求
-		proxy_set_header Host $proxy_host; 
-    proxy_set_header X-Real-IP $remote_addr;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-}
-
-# 域名转发到另外一个域名
-server{
-  listen 80;
-  server_name  www.qq.com;
-  index  index.php index.html index.htm;
-
-  location / {
-    proxy_pass  http://www.baidu.com;
-    proxy_set_header Host $proxy_host;
-    proxy_set_header X-Real-IP $remote_addr;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-  }
-}
-
-
-```
-
-## Nginx防止爬虫压测
-
-```shell
-# 配置目录conf下面   agent_deny.conf
-
-# 禁止Scrapy等工具的抓取
-if ($http_user_agent ~* (Scrapy|Curl|HttpClient)) {
-  return 403;
-}
-# 禁止指定UA及UA为空的访问
-if ($http_user_agent ~ "FeedDemon|JikeSpider|Indy Library|Alexa Toolbar|AskTbFXTV|AhrefsBot|CrawlDaddy|CoolpadWebkit|Java|Feedly|UniversalFeedParser|ApacheBench|Microsoft URL Control|Swiftbot|ZmEu|oBot|jaunty|Python-urllib|lightDeckReports Bot|YYSpider|DigExt|YisouSpider|HttpClient|MJ12bot|heritrix|EasouSpider|LinkpadBot|Ezooms|^$" )
-{
-  return 403;
-}
-# 禁止非GET|HEAD|POST|PUT|DELETE 方式的抓取
-if ($request_method !~ ^(GET|HEAD|POST|PUT|DELETE)$) {
-  return 403;
-}
- 
-# 禁止使用代理ip来访问，或禁止使用压力测试软件进行dos攻击
-  
-if ($http_user_agent ~* ApacheBench|WebBench|java/){
-                return 403;
+	      location /api/ {
+            proxy_pass http://127.0.0.1:8081/;
+	        proxy_set_header Host $proxy_host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         }
-if ($http_user_agent ~* (Wget|ab) ) {
-   return 403;
-}
+  
+        location /book/ {
+            proxy_set_header Host $proxy_host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+
+            add_header Access-Control-Allow-Origin *;
+            add_header Access-Control-Allow-Methods 'POST, GET, OPTIONS, PUT, DELETE,UPDATE';
+            add_header Access-Control-Allow-Headers 'DNT,X-Mx-ReqToken,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Authorization,jwt_token';
+            
+            if ($request_method = 'OPTIONS') {
+	 		          return 204;
+	 	        }
+            proxy_pass http://127.0.0.1:8082/;
+        }
+
+        location /front/ {
+		        proxy_set_header Host $proxy_host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            if ($http_env = "env_8081"){
+                proxy_pass http://node_v1/$1/$2;
+				        break;
+            }
+            if ($http_env = "env_8082"){
+                proxy_pass http://node_v2;
+                break;
+            }
+        }
+
+        location ~/header/(.*) {
+            proxy_set_header Host $proxy_host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            if ($http_env = "env_8081"){
+                proxy_pass http://node_v1/$1;
+                break;
+            }
+            if ($http_env = "env_8082"){
+                proxy_pass http://node_v2/$1;
+                break;
+            }
+        } 
+     }
+
+	   upstream node_v1  {
+         server 127.0.0.1:8081;
+     }
  
-if ($http_user_agent ~* LWP::Simple|BBBike|wget) {
-            return 403;
+     upstream node_v2  {
+         server 127.0.0.1:8082;
+     }  
+     # /usr/local下创建freewheeling_conf，进目录创建freewheeling.conf文件
+     # include后面必须跟绝对路径，相对路径不起作用
+     include /usr/local/freewheeling_conf/*.conf;
 }
 
 
+    
+    
+    # freewheeling.conf内容，将之前的html目录及页面复制一份命名成freewheeling
+    # cp rf html ./freewheeling
+    
+    server {
+        listen       80;
+        server_name  freewheeling.top;
 
-# 在配置文件server中  插入如下代码   插入到server还是location中需要验证
-include agent_deny.conf;
+        location / {
+            # 创建freewheeling存放页面
+            root   freewheeling;
+            index  index.html index.htm;
+        }
+
+        # 将请求转成https
+        rewrite ^(.*)$ https://$host$1 permanent;
+    }  
+    
+    
+    server {
+        listen       443 ssl;
+        server_name  freewheeling.top;
+        ssl_certificate      /usr/local/nginx/freewheeling_conf/freewheeling.top.pem;
+        ssl_certificate_key  /usr/local/nginx/freewheeling_conf/freewheeling.top.key;
+        ssl_session_cache    shared:SSL:1m;
+        ssl_session_timeout  5m;
+        ssl_ciphers  HIGH:!aNULL:!MD5;
+        ssl_prefer_server_ciphers  on;
+        location / {
+            root   freewheeling;
+            index  index.html index.htm;
+        }
+        error_page   500 502 503 504  /50x.html;
+        location = /50x.html {
+            root   freewheeling;
+        } 
+     }
+    
+
+
 ```
 
 
 
-# 在线安装MySQL
 
-```shell
 
-```
 
-# 离线安装MySQL5.7.24
+
+# 前后端泳道环境构建
+
+
+
+
+
+# MySQL5.7.24
 
 ```shell
 #卸载系统自带的Mariadb
@@ -621,6 +1164,14 @@ set sql_mode ='STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISI
 ```
 
 # MYSQL8.0.13
+
+> 软件复制到远程命令
+>
+> scp mysql-8.0.25-linux-glibc2.12-x86_64.tar root@1.15.101.238:/tmp 
+>
+> 软件复制到本地命令
+>
+> scp -r root@42.192.150.54:/usr/local/nginx/conf/nginx.conf  ~/
 
 ```shell
 #mysql-8.0.15-linux-glibc2.12-x86_64.tar.xz安装包安装
@@ -784,6 +1335,23 @@ firewall-cmd --reload
 firewall-cmd --list-ports
 ```
 
+## MySQL精进
+
+> **可重复读**：两个事务进行数据操作他们是互不干扰的，事务先A进行数据查询，事务B进行一次事务修改并进行数据**提交**，事务A再进行一次查询，数据是不改变的。 **读已提交**：两个事务进行数据操作，事务先A进行数据查询，事务B进行一次事务修改并进行数据**提交**，事务A再进行一次查询，数据是B修改后的数据。
+>
+> 可重复读，事务中的一致性读取读取的是事务第一次读取所建立的快照。
+
+```shell
+https://serverfault.com/questions/395993/limit-number-of-connections-to-a-mysql-database
+
+# 限制单个用户连接
+grant usage on *.* to user1234@'%' with max_user_connections 10;
+
+
+
+
+```
+
 
 
 
@@ -865,13 +1433,9 @@ firewall-cmd --reload
 firewall-cmd --list-ports
 ```
 
-# RabbitMQ在线安装
+# RabbitMQ3.7.14
 
-```shell
-
-```
-
-###RabbitMQ3.7.14离线安装（Elang在线安装）
+> Elang在线安装
 
 ```shell
 vi /etc/yum.repos.d/rabbitmq_erlang.repo
@@ -1148,5 +1712,193 @@ nohup sh bin/mqbroker -n localhost:9876 &
 ./bin/mqadmin updateTopic -n localhost:9876 -t stock -c DefaultCluster
 ```
 
+# Node环境配置
 
+```shell
+wget https://nodejs.org/dist/v18.16.0/node-v18.16.0-linux-x64.tar.xz
+cp node-v18.16.0-linux-x64.tar.xz /usr/local
+cd /usr/local
+tar -xf node-v18.16.0-linux-x64.tar.xz
+cd node-v18.16.0-linux-x64
+./node -v
+
+
+
+
+# 配置环境变量
+vi /etc/profile
+export PATH=/usr/local/node-v18.16.0-linux-x64/bin:$PATH
+# 重新加载配置
+source /etc/profile
+
+```
+
+
+
+# SSH超时配置
+
+```shell
+echo export TMOUT=1000000 >> /root/.bash_profile
+cat /root/.bash_profile
+source .bash_profile
+cp /etc/ssh/sshd_config /etc/ssh/sshd_config_bak
+echo ClientAliveInterval=60 >> /etc/ssh/sshd_config
+service sshd restart
+cat /etc/ssh/sshd_config
+service sshd restart
+exit
+```
+
+# Python环境搭建
+
+```shell
+wget https://www.python.org/ftp/python/3.9.9/Python-3.9.9.tgz
+```
+
+# Docker基础命令
+
+```shell
+# 获取所有的容器
+docker ps -a
+# 删除某个容器
+docker container rm cc3f2ff51cab cd20b396a061
+# 删除所有已经停止的容器
+docker system prune
+```
+
+
+
+
+
+# Docker构建CentOS7环境
+
+```shell
+# 拉取centos7镜像
+[root@localhost]$ docker pull centos:7
+[root@localhost]$ docker images
+# 启动镜像centos7，如果不指定 /bin/bash，容器运行后会自动停止
+# docker run -d -i -t <Image ID> /bin/bash
+[root@localhost]$ docker run -d -i -t eeb6ee3f44bd /bin/bash
+[root@localhost]$ docker ps
+# 进入容器 docker exec -it <CONTAINER ID> bash
+[root@localhost]$ docker exec -it dc3e38180b39 bash
+# ifconfig命令不存在，下载安装
+[root@localhost]$ ifconfig
+[root@localhost]$ yum install -y net-tools
+# 验证百度是否ping的通，docker默认没落模式是桥接，外网不通，删除容器重启按照host模式启动
+# docker kill 容器ID  -->命令:停掉容器
+# docker rm 容器ID  -->命令:删除容器
+# 使用--net:host选项构建主机网络模型容器，默认是桥接
+# 重新启动容器
+[root@localhost]$ docker run --net host --name centos7 -dit eeb6ee3f44bd /bin/bash
+# ping百度如果不通检查宿主机防火墙是否阻止了 ICMP 协议，如果是，请打开防火墙的相关端口
+# 下载文件一般使用wget,命令不存在使用yum install wget
+[root@localhost]$ yum install wget
+
+# 安装编译软件
+yum install -y gcc-c++
+yum install -y pcre pcre-devel
+yum install -y openssl openssl-devel
+yum install -y zlib zlib-devel
+
+# 下载nginx软件
+wget https://nginx.org/download/nginx-1.22.0.tar.gz
+
+# 解压软件
+tar -zxf nginx-1.22.0.tar.gz
+cd nginx-1.22.0
+# 编译软件
+#./configure --prefix=/usr/local/nginx/
+./configure --prefix=/usr/local/nginx --with-http_stub_status_module --with-http_ssl_module
+# 安装软件   增加模块重新编译后make后替换编译产物nginx即可，make install 会重装
+make && make install
+
+# 配置环境变量
+vi /etc/profile
+export PATH=/usr/local/nginx/sbin:$PATH
+# 重新加载环境变量
+source /etc/profile
+
+# 查看Nginx配置是否正确
+nginx -t
+
+# 启动Nginx
+nginx
+
+# 验证nginx 
+curl 127.0.0.1
+
+
+# 安装lua整合nginx
+yum install -y git
+git clone https://github.com/openresty/luajit2
+cd luajit2
+make && make install PREFIX=/usr/local/LuaJIT
+
+
+# 配置包引用规避libluajit-5.1.so.2找不到错误
+echo "/usr/local/LuaJIT/lib" > /etc/ld.so.conf.d/usr_local_lib.conf
+ldconfig
+
+
+vim /etc/profile
+# 最后添加两行配置
+export LUAJIT_LIB=/usr/local/LuaJIT/lib
+# 此处路径/usr/local/LuaJIT/include下检查下最新的版本号码，可能会是最新的版本，以实际版本为准
+export LUAJIT_INC=/usr/local/LuaJIT/include/luajit-2.1
+# 重新加载配置文件
+source /etc/profile
+# 验证配置 显示 Lua 5.1.4  Copyright (C) 1994-2008 Lua.org, PUC-Rio
+lua -v
+
+# 添加编译模块
+cd /usr/local/
+# 下载ngx_devel_kit，链接不通可以使用wget https://codeload.github.com/vision5/ngx_devel_kit/tar.gz/refs/tags/v0.3.0 -O v0.3.0.tar.gz
+wget https://github.com/simpl/ngx_devel_kit/archive/v0.3.0.tar.gz
+# 使用此版本lua-nginx-module-0.10.14,其他版本会有问题，下载网速链接也可以使用wget https://codeload.github.com/openresty/lua-nginx-module/tar.gz/refs/tags/v0.10.14 -O v0.10.14.tar.gz
+wget https://github.com/openresty/lua-nginx-module/archive/v0.10.14.tar.gz
+
+tar -zxf v0.3.0.tar.gz 
+tar -zxf v0.10.14.tar.gz
+
+# 停止nginx
+nginx -s stop
+# 删除之前安装的nginx在/usr/local目录下
+rm -rf nginx
+
+# 回到nginx软件包下重新编译安装
+cd /home/nginx-1.22.0
+
+# 构建Makefile
+./configure --prefix=/usr/local/nginx --with-http_ssl_module --with-http_flv_module --with-http_stub_status_module --with-http_gzip_static_module --with-http_realip_module --with-pcre --add-module=/usr/local/lua-nginx-module-0.10.14 --add-module=/usr/local/ngx_devel_kit-0.3.0 --with-stream
+# 重新编译并安装nginx
+make & make install
+# 查看Nginx配置是否正确
+nginx -t
+
+# 启动Nginx
+nginx
+
+# 验证LUA，nginx http server里添加配置
+cd /usr/local/nginx/conf
+vi nginx.conf
+
+    location /hello_lua {
+        default_type 'text/html';
+        content_by_lua 'ngx.say("hello, lua!")';
+    }
+# nginx重新加载配置
+nginx -s reload
+# 访问验证lua是否配置成功
+curl http://127.0.0.1/hello_lua
+
+
+
+
+
+
+
+
+
+```
 
